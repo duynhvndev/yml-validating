@@ -1,0 +1,31 @@
+version: '3.8'
+
+services:
+  yml-validator:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      - DJANGO_SETTINGS_MODULE=yml_validator.settings
+      - DEBUG=True
+    volumes:
+      - .:/app
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:8000/', timeout=10)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Optional: Add a production-ready setup with nginx
+  yml-validator-prod:
+    build: .
+    environment:
+      - DJANGO_SETTINGS_MODULE=yml_validator.settings
+      - DEBUG=False
+    expose:
+      - "8000"
+    restart: unless-stopped
+    profiles:
+      - production
