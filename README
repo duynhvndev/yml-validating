@@ -1,0 +1,150 @@
+# Django YAML Validator
+
+A powerful web-based YAML validator and corrector built with Django. Features real-time validation, automatic error correction, and a modern Bootstrap UI.
+
+## Features
+
+- ✅ **Real-time YAML validation** with detailed error messages
+- ✅ **Automatic YAML correction** for common formatting issues
+- ✅ **Line-by-line error highlighting** with specific line numbers
+- ✅ **Copy-to-clipboard functionality** for corrected YAML
+- ✅ **Keyboard shortcuts** - Ctrl+Enter (validate), Ctrl+Shift+Enter (correct)
+- ✅ **Modern responsive UI** with Bootstrap 5
+- ✅ **Standalone executable** support with PyInstaller
+
+## Quick Start
+
+### Option 1: Run Directly with Python
+
+1. **Setup environment:**
+```bash
+cd yml-validating
+source env/bin/activate  # On Windows: env\Scripts\activate
+pip install -r requirements.txt
+```
+
+2. **Run the development server:**
+```bash
+python manage.py runserver
+```
+
+3. **Access the application:**
+Open your browser and go to: `http://127.0.0.1:8000/`
+
+### Option 2: Build and Run Executable
+
+1. **Install PyInstaller:**
+```bash
+source env/bin/activate
+pip install pyinstaller
+```
+
+2. **Build the executable:**
+```bash
+pyinstaller yml-validator.spec
+```
+
+3. **Run the executable:**
+```bash
+# Default (runs on 127.0.0.1:8000)
+./dist/yml-validator
+
+# Custom port
+./dist/yml-validator 8080
+
+# Custom host and port
+./dist/yml-validator 0.0.0.0:8080
+
+# Network accessible
+./dist/yml-validator 0.0.0.0:8000
+```
+
+## Usage Examples
+
+### Running with Different Configurations
+
+**Local development:**
+```bash
+./dist/yml-validator 9000
+```
+
+**Network accessible (other devices can connect):**
+```bash
+./dist/yml-validator 0.0.0.0:8000
+```
+
+**Production-like setup:**
+```bash
+./dist/yml-validator 0.0.0.0:80
+```
+
+**Specific network interface:**
+```bash
+./dist/yml-validator 192.168.1.50:8080
+```
+
+## Development
+
+### Project Structure
+```
+yml-validating/
+├── validator/              # Main Django app
+│   ├── templates/         # HTML templates
+│   ├── views.py          # API endpoints
+│   └── urls.py           # URL routing
+├── yml_validator/         # Django project settings
+├── manage.py             # Django management script
+├── run_server.py         # PyInstaller entry point
+├── yml-validator.spec    # PyInstaller configuration
+└── requirements.txt      # Python dependencies
+```
+
+### Building from Source
+
+1. **Clone and setup:**
+```bash
+git clone <repository-url>
+cd yml-validating
+python -m venv env
+source env/bin/activate
+pip install -r requirements.txt
+```
+
+2. **Test locally:**
+```bash
+python manage.py runserver
+```
+
+3. **Build executable:**
+```bash
+pip install pyinstaller
+pyinstaller yml-validator.spec
+```
+
+## API Endpoints
+
+- `POST /validate/` - Validate YAML content
+- `POST /correct/` - Automatically correct YAML issues
+
+## Requirements
+
+- Python 3.8+
+- Django 4.x
+- PyYAML
+- Bootstrap 5 (CDN)
+
+## License
+
+MIT License - feel free to use and modify as needed.
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Test thoroughly
+5. Submit a pull request
+
+---
+
+**Built with ❤️ using Django and Bootstrap**

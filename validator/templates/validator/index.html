@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YAML Validator</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome for icons -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .yaml-input {
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            line-height: 1.4;
+        }
+        .result-panel {
+            min-height: 400px;
+            border: 2px solid #dee2e6;
+            border-radius: 0.375rem;
+            padding: 1rem;
+            background-color: #f8f9fa;
+        }
+        .validation-success {
+            border-color: #198754 !important;
+            background-color: #d1e7dd !important;
+        }
+        .validation-error {
+            border-color: #dc3545 !important;
+            background-color: #f8d7da !important;
+        }
+        .line-numbers {
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            color: #6c757d;
+            background-color: #f8f9fa;
+            border-right: 1px solid #dee2e6;
+            padding: 0.5rem;
+            user-select: none;
+            white-space: pre-line;
+        }
+        .yaml-container {
+            position: relative;
+            display: flex;
+        }
+        .yaml-content {
+            flex: 1;
+        }
+        .error-line {
+            background-color: #f8d7da !important;
+            border-left: 3px solid #dc3545;
+            padding-left: 0.5rem;
+        }
+        .loading-spinner {
+            display: none;
+        }
+        /* Force hide result panel when other areas are active */
+        .result-panel.force-hidden {
+            display: none !important;
+            visibility: hidden !important;
+            height: 0 !important;
+            overflow: hidden !important;
+        }
+    </style>
+</head>
+<body class="bg-light">
+    <div class="container-fluid py-4">
+        <div class="row">
+            <div class="col-12">
+                <h1 class="text-center mb-4">
+                    <i class="fas fa-code text-primary"></i>
+                    YAML Validator
+                </h1>
+            </div>
+        </div>
+        
+        <div class="row g-3">
+            <!-- Left Panel - Input -->
+            <div class="col-md-5">
+                <div class="card h-100">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0">
+                            <i class="fas fa-edit"></i>
+                            YAML Input
+                        </h5>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="yaml-container">
+                            <div class="line-numbers" id="lineNumbers">1</div>
+                            <textarea 
+                                id="yamlInput" 
+                                class="form-control yaml-input yaml-content" 
+                                rows="20" 
+                                placeholder="Enter your YAML content here...
+
+Example:
+name: Duy Nguyen
+age: 30
+skills:
+  - Go
+  - Java
+  - Python
+address:
+  city: Tay Ninh
+  country: VN"
+                                style="border: none; border-radius: 0; resize: none; outline: none;"
+                            ></textarea>
+                        </div>
+                    </div>
+                    <div class="card-footer">
+                        <small class="text-muted">
+                            <i class="fas fa-info-circle"></i>
+                            Enter your YAML content and click "Validate" to check syntax
+                        </small>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Middle Panel - Action Buttons -->
+            <div class="col-md-2">
+                <div class="sticky-top" style="top: 20px;">
+                    <div class="text-center">
+                        <button id="validateBtn" class="btn btn-success btn-lg px-4 py-2 rounded-pill shadow mb-3 w-100">
+                            <i class="fas fa-check-circle"></i>
+                            <span class="d-block">Validate</span>
+                        </button>
+                        <button id="correctBtn" class="btn btn-warning btn-lg px-4 py-2 rounded-pill shadow w-100">
+                            <i class="fas fa-magic"></i>
+                            <span class="d-block">Correct YAML</span>
+                        </button>
+                        <div class="loading-spinner mt-3">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                            <div class="mt-2 text-muted">Processing...</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Right Panel - Results -->
+            <div class="col-md-5">
+                <div class="card h-100">
+                    <div class="card-header bg-info text-white">
+                        <h5 class="mb-0">
+                            <i class="fas fa-clipboard-check"></i>
+                            Validation Results
+                        </h5>
+                    </div>
+                    <div class="card-body p-0">
+                        <!-- Error/Success notification area -->
+                        <div id="notificationArea" class="p-3 border-bottom" style="display: none;">
+                            <!-- Notifications will be inserted here -->
+                        </div>
+                        
+                        <!-- Corrected YAML display area -->
+                        <div id="correctedYamlArea" class="p-3" style="display: none;">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <h6 class="mb-0 text-success">
+                                    <i class="fas fa-code"></i> Corrected YAML:
+                                </h6>
+                                <button id="autoCopyBtn" class="btn btn-sm btn-outline-primary">
+                                    <i class="fas fa-copy"></i> Auto Copy
+                                </button>
+                            </div>
+                            <pre id="correctedYamlContent" class="bg-light p-3 rounded border" style="max-height: 300px; overflow-y: auto; font-size: 12px; font-family: 'Courier New', monospace;"></pre>
+                        </div>
+                        
+                        <!-- Default result panel -->
+                        <div id="resultPanel" class="result-panel d-flex align-items-center justify-content-center">
+                            <div class="text-center text-muted">
+                                <i class="fas fa-arrow-left fa-3x mb-3"></i>
+                                <h5>Ready to validate</h5>
+                                <p>Enter YAML content and click "Validate" or "Correct YAML" to see results</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Footer -->
+        <div class="row mt-4">
+            <div class="col-12 text-center">
+                <small class="text-muted">
+                    Built with Django and Bootstrap
+                    <i class="fas fa-heart text-danger"></i> 
+                    Duy Nguyen Hoang - YAML Validation Tool
+                </small>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const yamlInput = document.getElementById('yamlInput');
+            const validateBtn = document.getElementById('validateBtn');
+            const correctBtn = document.getElementById('correctBtn');
+            const resultPanel = document.getElementById('resultPanel');
+            const notificationArea = document.getElementById('notificationArea');
+            const correctedYamlArea = document.getElementById('correctedYamlArea');
+            const correctedYamlContent = document.getElementById('correctedYamlContent');
+            const autoCopyBtn = document.getElementById('autoCopyBtn');
+            const lineNumbers = document.getElementById('lineNumbers');
+            const loadingSpinner = document.querySelector('.loading-spinner');
+            
+            // Update line numbers
+            function updateLineNumbers() {
+                const lines = yamlInput.value.split('\n');
+                const lineNumbersText = lines.map((_, index) => index + 1).join('\n');
+                lineNumbers.textContent = lineNumbersText;
+            }
+            
+            // Initial line numbers
+            updateLineNumbers();
+            
+            // Update line numbers on input
+            yamlInput.addEventListener('input', updateLineNumbers);
+            yamlInput.addEventListener('scroll', function() {
+                lineNumbers.scrollTop = yamlInput.scrollTop;
+            });
+            
+            // Reset result areas
+            function resetResultAreas() {
+                // Hide all areas initially
+                notificationArea.style.display = 'none';
+                correctedYamlArea.style.display = 'none';
+                resultPanel.style.display = 'none';
+                
+                // Clear content to prevent conflicts
+                notificationArea.innerHTML = '';
+                correctedYamlContent.textContent = '';
+                resultPanel.innerHTML = '';
+                
+                // Reset classes
+                resultPanel.className = 'result-panel d-flex align-items-center justify-content-center';
+            }
+            
+            // Show loading in result panel
+            function showLoadingInResultPanel(message) {
+                resetResultAreas();
+                resultPanel.innerHTML = `
+                    <div class="text-center">
+                        <i class="fas fa-spinner fa-spin fa-2x text-primary"></i>
+                        <div class="mt-2 text-muted">${message}</div>
+                    </div>
+                `;
+                resultPanel.style.display = 'flex';
+                resultPanel.className = 'result-panel d-flex align-items-center justify-content-center';
+            }
+            
+            // Show notification - RESTORED to use notification area (for red error messages with line numbers)
+            function showNotification(type, title, message, lineNumber = null) {
+                const iconClass = type === 'success' ? 'fa-check-circle text-success' : 'fa-times-circle text-danger';
+                const alertClass = type === 'success' ? 'alert-success' : 'alert-danger';
+                
+                let notificationHtml = `
+                    <div class="alert ${alertClass} mb-0">
+                        <div class="d-flex align-items-center">
+                            <i class="fas ${iconClass} fa-2x me-3"></i>
+                            <div>
+                                <h6 class="mb-1">${title}</h6>
+                                <p class="mb-0">${message}</p>
+                                ${lineNumber ? `<small><strong>Error on line ${lineNumber}</strong></small>` : ''}
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                // Show notification in the TOP notification area (as requested)
+                notificationArea.innerHTML = notificationHtml;
+                notificationArea.style.display = 'block';
+                
+                // CRITICAL: FORCE HIDE result panel to prevent redundant bottom area
+                resultPanel.style.display = 'none';
+                resultPanel.style.visibility = 'hidden';
+                resultPanel.innerHTML = '';
+                resultPanel.className = 'result-panel force-hidden';
+                
+                console.log('showNotification: resultPanel forcefully hidden');
+            }
+            
+            // Show corrected YAML - RESTORED to use proper 3-area design
+            function showCorrectedYaml(correctedYaml, message, isSuccess = true) {
+                // Show notification in TOP area
+                if (isSuccess) {
+                    showNotification('success', 'YAML Corrected!', message);
+                } else {
+                    showNotification('error', 'Partial Correction Applied', message);
+                }
+                
+                // Show corrected YAML in MIDDLE area
+                correctedYamlContent.textContent = correctedYaml;
+                correctedYamlArea.style.display = 'block';
+                
+                // CRITICAL: FORCE HIDE result panel to prevent redundant bottom area
+                resultPanel.style.display = 'none';
+                resultPanel.style.visibility = 'hidden';
+                resultPanel.innerHTML = '';
+                resultPanel.className = 'result-panel force-hidden';
+                
+                console.log('showCorrectedYaml: resultPanel forcefully hidden');
+            }
+            
+            // Auto copy functionality
+            autoCopyBtn.addEventListener('click', function() {
+                const correctedText = correctedYamlContent.textContent;
+                navigator.clipboard.writeText(correctedText).then(function() {
+                    // Temporarily change button text to show success
+                    const originalText = autoCopyBtn.innerHTML;
+                    autoCopyBtn.innerHTML = '<i class="fas fa-check"></i> Copied!';
+                    autoCopyBtn.classList.remove('btn-outline-primary');
+                    autoCopyBtn.classList.add('btn-success');
+                    
+                    setTimeout(function() {
+                        autoCopyBtn.innerHTML = originalText;
+                        autoCopyBtn.classList.remove('btn-success');
+                        autoCopyBtn.classList.add('btn-outline-primary');
+                    }, 2000);
+                }).catch(function(err) {
+                    console.error('Failed to copy text: ', err);
+                    alert('Failed to copy to clipboard. Please copy manually.');
+                });
+            });
+            
+            // Validate YAML
+            validateBtn.addEventListener('click', function() {
+                const yamlContent = yamlInput.value.trim();
+                
+                if (!yamlContent) {
+                    showNotification('error', 'No Content', 'Please enter some YAML content to validate.');
+                    return;
+                }
+                
+                // Show loading state
+                validateBtn.disabled = true;
+                correctBtn.disabled = true;
+                loadingSpinner.style.display = 'block';
+                showLoadingInResultPanel('Validating YAML...');
+                
+                // Send AJAX request
+                fetch('/validate/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        yaml_content: yamlContent
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    // Hide loading state - CLEAR ALL LOADING ANIMATIONS
+                    validateBtn.disabled = false;
+                    correctBtn.disabled = false;
+                    loadingSpinner.style.display = 'none';
+                    
+                    // FORCE CLEAR the result panel loading animation
+                    resetResultAreas();
+                    
+                    if (data.valid) {
+                        // Show success notification
+                        showNotification('success', 'Valid YAML!', data.message);
+                        
+                        // Show parsed structure in result panel
+                        resultPanel.style.display = 'block';
+                        resultPanel.className = 'result-panel validation-success';
+                        resultPanel.innerHTML = `
+                            <div class="w-100">
+                                <h6 class="text-success mb-3"><i class="fas fa-code"></i> Parsed Structure:</h6>
+                                <pre class="bg-white p-3 rounded border" style="max-height: 300px; overflow-y: auto; font-size: 12px;">${JSON.stringify(data.parsed_data, null, 2)}</pre>
+                            </div>
+                        `;
+                        
+                        // Remove any error highlighting
+                        yamlInput.classList.remove('is-invalid');
+                        
+                    } else {
+                        // Show error notification
+                        showNotification('error', 'Invalid YAML!', data.error, data.line_number);
+                        
+                        // Show tips in result panel
+                        resultPanel.style.display = 'block';
+                        resultPanel.className = 'result-panel validation-error';
+                        resultPanel.innerHTML = `
+                            <div class="w-100">
+                                <h6 class="text-danger mb-3"><i class="fas fa-lightbulb"></i> Tips to Fix:</h6>
+                                <ul class="text-danger mb-0">
+                                    <li>Check for proper indentation (use spaces, not tabs)</li>
+                                    <li>Ensure colons are followed by a space</li>
+                                    <li>Check for unmatched quotes or brackets</li>
+                                    <li>Verify list items start with a dash and space</li>
+                                    <li>Try using the "Correct YAML" button for automatic fixes</li>
+                                </ul>
+                            </div>
+                        `;
+                        
+                        yamlInput.classList.add('is-invalid');
+                        
+                        if (data.line_number) {
+                            highlightErrorLine(data.line_number);
+                        }
+                    }
+                })
+                .catch(error => {
+                    console.error('Validation error:', error);
+                    // Hide loading state - CLEAR ALL LOADING ANIMATIONS
+                    validateBtn.disabled = false;
+                    correctBtn.disabled = false;
+                    loadingSpinner.style.display = 'none';
+                    
+                    // FORCE CLEAR the result panel loading animation
+                    resetResultAreas();
+                    
+                    showNotification('error', 'Network Error', 'Unable to validate YAML. Please try again.');
+                    
+                    // Show error state in result panel
+                    resultPanel.innerHTML = `
+                        <div class="text-center text-muted">
+                            <i class="fas fa-exclamation-triangle fa-3x text-warning"></i>
+                            <h5 class="text-warning mt-2">Network Error</h5>
+                            <p>Please check your connection and try again.</p>
+                        </div>
+                    `;
+                });
+            });
+            
+            // Correct YAML
+            correctBtn.addEventListener('click', function() {
+                const yamlContent = yamlInput.value.trim();
+                
+                if (!yamlContent) {
+                    showNotification('error', 'No Content', 'Please enter some YAML content to correct.');
+                    return;
+                }
+                
+                // Show loading state
+                validateBtn.disabled = true;
+                correctBtn.disabled = true;
+                loadingSpinner.style.display = 'block';
+                showLoadingInResultPanel('Correcting YAML...');
+                
+                // Send AJAX request
+                fetch('/correct/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        yaml_content: yamlContent
+                    })
+                })
+                .then(response => {
+                    console.log('Response status:', response.status);
+                    console.log('Response ok:', response.ok);
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    console.log('Received correction data:', data);
+                    // Hide loading state - CLEAR ALL LOADING ANIMATIONS
+                    validateBtn.disabled = false;
+                    correctBtn.disabled = false;
+                    loadingSpinner.style.display = 'none';
+                    
+                    // FORCE CLEAR the result panel loading animation
+                    resetResultAreas();
+                    
+                    if (data.success) {
+                        // Show corrected YAML
+                        showCorrectedYaml(data.corrected_yaml, data.message);
+                        yamlInput.classList.remove('is-invalid');
+                    } else {
+                        // Show error notification
+                        showNotification('error', 'Correction Failed', data.error, data.line_number);
+                        
+                        // If partial correction was attempted, show it
+                        if (data.partial_correction && data.corrected_yaml) {
+                            showCorrectedYaml(data.corrected_yaml, 'Partial correction applied, but YAML is still invalid.', false);
+                        } else {
+                            // Show default error state in result panel
+                            resultPanel.innerHTML = `
+                                <div class="text-center text-muted">
+                                    <i class="fas fa-exclamation-triangle fa-3x text-danger"></i>
+                                    <h5 class="text-danger mt-2">Correction Failed</h5>
+                                    <p>Unable to automatically correct this YAML.</p>
+                                </div>
+                            `;
+                        }
+                        
+                        yamlInput.classList.add('is-invalid');
+                    }
+                })
+                .catch(error => {
+                    console.error('Correction error:', error);
+                    // Hide loading state - CLEAR ALL LOADING ANIMATIONS
+                    validateBtn.disabled = false;
+                    correctBtn.disabled = false;
+                    loadingSpinner.style.display = 'none';
+                    
+                    // FORCE CLEAR the result panel loading animation
+                    resetResultAreas();
+                    
+                    showNotification('error', 'Network Error', 'Unable to correct YAML. Please try again.');
+                    
+                    // Show error state in result panel
+                    resultPanel.innerHTML = `
+                        <div class="text-center text-muted">
+                            <i class="fas fa-exclamation-triangle fa-3x text-warning"></i>
+                            <h5 class="text-warning mt-2">Network Error</h5>
+                            <p>Please check your connection and try again.</p>
+                        </div>
+                    `;
+                });
+            });
+            
+            function highlightErrorLine(lineNumber) {
+                // This is a simple implementation - in a more advanced version,
+                // you might want to use a code editor library like CodeMirror or Monaco
+                const lines = yamlInput.value.split('\n');
+                yamlInput.focus();
+                
+                // Calculate the position of the error line
+                let position = 0;
+                for (let i = 0; i < lineNumber - 1; i++) {
+                    position += lines[i].length + 1; // +1 for newline character
+                }
+                
+                // Set cursor to the beginning of the error line
+                yamlInput.setSelectionRange(position, position + lines[lineNumber - 1].length);
+            }
+            
+            // Allow keyboard shortcuts
+            yamlInput.addEventListener('keydown', function(e) {
+                if (e.ctrlKey && e.key === 'Enter') {
+                    e.preventDefault();
+                    validateBtn.click();
+                } else if (e.ctrlKey && e.shiftKey && e.key === 'Enter') {
+                    e.preventDefault();
+                    correctBtn.click();
+                }
+            });
+        });
+    </script>
+</body>
+</html>
