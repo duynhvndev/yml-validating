@@ -346,10 +346,48 @@ address:
                 console.log('showCorrectedYaml: resultPanel forcefully hidden');
             }
             
+            // Cross-browser copy functionality
+            function copyToClipboard(text) {
+                // Try modern clipboard API first
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    return navigator.clipboard.writeText(text);
+                }
+                
+                // Fallback for older browsers or HTTP contexts
+                return new Promise(function(resolve, reject) {
+                    try {
+                        // Create a temporary textarea element
+                        const textarea = document.createElement('textarea');
+                        textarea.value = text;
+                        textarea.style.position = 'fixed';
+                        textarea.style.opacity = '0';
+                        textarea.style.top = '-9999px';
+                        textarea.style.left = '-9999px';
+                        
+                        document.body.appendChild(textarea);
+                        textarea.focus();
+                        textarea.select();
+                        
+                        // Try to copy using execCommand
+                        const successful = document.execCommand('copy');
+                        document.body.removeChild(textarea);
+                        
+                        if (successful) {
+                            resolve();
+                        } else {
+                            reject(new Error('execCommand failed'));
+                        }
+                    } catch (err) {
+                        reject(err);
+                    }
+                });
+            }
+            
             // Auto copy functionality
             autoCopyBtn.addEventListener('click', function() {
                 const correctedText = correctedYamlContent.textContent;
-                navigator.clipboard.writeText(correctedText).then(function() {
+                
+                copyToClipboard(correctedText).then(function() {
                     // Temporarily change button text to show success
                     const originalText = autoCopyBtn.innerHTML;
                     autoCopyBtn.innerHTML = '<i class="fas fa-check"></i> Copied!';
@@ -363,7 +401,26 @@ address:
                     }, 2000);
                 }).catch(function(err) {
                     console.error('Failed to copy text: ', err);
-                    alert('Failed to copy to clipboard. Please copy manually.');
+                    
+                    // Show a more user-friendly fallback
+                    const originalText = autoCopyBtn.innerHTML;
+                    autoCopyBtn.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Select & Copy';
+                    autoCopyBtn.classList.remove('btn-outline-primary');
+                    autoCopyBtn.classList.add('btn-warning');
+                    
+                    // Select the text for manual copying
+                    const range = document.createRange();
+                    range.selectNodeContents(correctedYamlContent);
+                    const selection = window.getSelection();
+                    selection.removeAllRanges();
+                    selection.addRange(range);
+                    
+                    setTimeout(function() {
+                        autoCopyBtn.innerHTML = originalText;
+                        autoCopyBtn.classList.remove('btn-warning');
+                        autoCopyBtn.classList.add('btn-outline-primary');
+                        selection.removeAllRanges();
+                    }, 3000);
                 });
             });
             
