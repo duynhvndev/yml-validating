@@ -15,11 +15,12 @@
             line-height: 1.4;
         }
         .result-panel {
-            min-height: 400px;
+            height: calc(100% - 2rem);
             border: 2px solid #dee2e6;
             border-radius: 0.375rem;
             padding: 1rem;
             background-color: #f8f9fa;
+            margin: 1rem;
         }
         .validation-success {
             border-color: #198754 !important;
@@ -30,18 +31,24 @@
             background-color: #f8d7da !important;
         }
         .line-numbers {
+            width: 50px;
             font-family: 'Courier New', monospace;
-            font-size: 12px;
+            font-size: 14px;
+            line-height: 1.4;
+            text-align: right;
             color: #6c757d;
             background-color: #f8f9fa;
             border-right: 1px solid #dee2e6;
             padding: 0.5rem;
             user-select: none;
             white-space: pre-line;
+            overflow: hidden;
+            box-sizing: border-box;
         }
         .yaml-container {
             position: relative;
             display: flex;
+            height: 500px;
         }
         .yaml-content {
             flex: 1;
@@ -61,6 +68,23 @@
             height: 0 !important;
             overflow: hidden !important;
         }
+        
+        /* Enhanced responsive design for desktop */
+        @media (min-width: 1400px) {
+            /* XXL screens - more centered layout with larger middle panel */
+            .container-fluid {
+                max-width: 1600px;
+                margin: 0 auto;
+            }
+        }
+        
+        @media (max-width: 991.98px) {
+            /* Mobile and tablet - stack vertically */
+            .sticky-top {
+                position: static !important;
+                margin-bottom: 1rem;
+            }
+        }
     </style>
 </head>
 <body class="bg-light">
@@ -76,7 +100,7 @@
         
         <div class="row g-3">
             <!-- Left Panel - Input -->
-            <div class="col-md-5">
+            <div class="col-12 col-lg-5 col-xl-6 col-xxl-5">
                 <div class="card h-100">
                     <div class="card-header bg-primary text-white">
                         <h5 class="mb-0">
@@ -117,7 +141,7 @@ address:
             </div>
             
             <!-- Middle Panel - Action Buttons -->
-            <div class="col-md-2">
+            <div class="col-12 col-lg-2 col-xl-12 col-xxl-2">
                 <div class="sticky-top" style="top: 20px;">
                     <div class="text-center">
                         <button id="validateBtn" class="btn btn-success btn-lg px-4 py-2 rounded-pill shadow mb-3 w-100">
@@ -139,7 +163,7 @@ address:
             </div>
             
             <!-- Right Panel - Results -->
-            <div class="col-md-5">
+            <div class="col-12 col-lg-5 col-xl-6 col-xxl-5">
                 <div class="card h-100">
                     <div class="card-header bg-info text-white">
                         <h5 class="mb-0">
@@ -147,7 +171,7 @@ address:
                             Validation Results
                         </h5>
                     </div>
-                    <div class="card-body p-0">
+                    <div class="card-body p-0" style="height: 500px; overflow-y: auto;">
                         <!-- Error/Success notification area -->
                         <div id="notificationArea" class="p-3 border-bottom" style="display: none;">
                             <!-- Notifications will be inserted here -->
@@ -163,7 +187,7 @@ address:
                                     <i class="fas fa-copy"></i> Auto Copy
                                 </button>
                             </div>
-                            <pre id="correctedYamlContent" class="bg-light p-3 rounded border" style="max-height: 300px; overflow-y: auto; font-size: 12px; font-family: 'Courier New', monospace;"></pre>
+                            <pre id="correctedYamlContent" class="bg-light p-3 rounded border" style="max-height: 400px; overflow-y: auto; font-size: 12px; font-family: 'Courier New', monospace;"></pre>
                         </div>
                         
                         <!-- Default result panel -->
@@ -174,6 +198,12 @@ address:
                                 <p>Enter YAML content and click "Validate" or "Correct YAML" to see results</p>
                             </div>
                         </div>
+                    </div>
+                    <div class="card-footer">
+                        <small class="text-muted">
+                            <i class="fas fa-info-circle"></i>
+                            Validation results and corrected YAML will appear here after processing
+                        </small>
                     </div>
                 </div>
             </div>
@@ -212,16 +242,27 @@ address:
                 const lines = yamlInput.value.split('\n');
                 const lineNumbersText = lines.map((_, index) => index + 1).join('\n');
                 lineNumbers.textContent = lineNumbersText;
+                
+                // Ensure scroll synchronization
+                lineNumbers.scrollTop = yamlInput.scrollTop;
             }
             
             // Initial line numbers
             updateLineNumbers();
             
-            // Update line numbers on input
+            // Update line numbers on input and other events
             yamlInput.addEventListener('input', updateLineNumbers);
+            yamlInput.addEventListener('paste', function() {
+                // Update line numbers after paste operation completes
+                setTimeout(updateLineNumbers, 10);
+            });
+            yamlInput.addEventListener('keyup', updateLineNumbers);
             yamlInput.addEventListener('scroll', function() {
                 lineNumbers.scrollTop = yamlInput.scrollTop;
             });
+            
+            // Ensure line numbers are updated when content changes
+            yamlInput.addEventListener('change', updateLineNumbers);
             
             // Reset result areas
             function resetResultAreas() {
@@ -371,7 +412,7 @@ address:
                         resultPanel.innerHTML = `
                             <div class="w-100">
                                 <h6 class="text-success mb-3"><i class="fas fa-code"></i> Parsed Structure:</h6>
-                                <pre class="bg-white p-3 rounded border" style="max-height: 300px; overflow-y: auto; font-size: 12px;">${JSON.stringify(data.parsed_data, null, 2)}</pre>
+                                <pre class="bg-white p-3 rounded border" style="max-height: 400px; overflow-y: auto; font-size: 12px;">${JSON.stringify(data.parsed_data, null, 2)}</pre>
                             </div>
                         `;
                         

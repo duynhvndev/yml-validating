@@ -6,6 +6,58 @@ import json
 import io
 import re
 from ruamel.yaml import YAML
+from yaml.constructor import ConstructorError
+
+
+class DuplicateKeyError(Exception):
+    """Custom exception for duplicate keys in YAML."""
+    pass
+
+
+class SafeLoaderWithDuplicateKeyCheck(yaml.SafeLoader):
+    """Custom YAML loader that detects duplicate keys."""
+    
+    def construct_mapping(self, node, deep=False):
+        mapping = {}
+        for key_node, value_node in node.value:
+            key = self.construct_object(key_node, deep=deep)
+            if key in mapping:
+                # Found duplicate key - raise error with line information
+                raise DuplicateKeyError(
+                    f"Duplicate key '{key}' found at line {key_node.start_mark.line + 1}"
+                )
+            value = self.construct_object(value_node, deep=deep)
+            mapping[key] = value
+        return mapping
+
+
+def validate_yaml_with_duplicate_check(yaml_content):
+    """
+    Validate YAML content with proper duplicate key detection.
+    Returns (is_valid, parsed_data, error_message, line_number)
+    """
+    try:
+        # Use custom loader to detect duplicate keys
+        parsed_data = yaml.load(yaml_content, Loader=SafeLoaderWithDuplicateKeyCheck)
+        return True, parsed_data, None, None
+    except DuplicateKeyError as e:
+        # Extract line number from duplicate key error
+        error_msg = str(e)
+        line_number = None
+        if "line" in error_msg:
+            try:
+                line_number = int(error_msg.split("line ")[1].split()[0])
+            except (IndexError, ValueError):
+                pass
+        return False, None, error_msg, line_number
+    except yaml.YAMLError as e:
+        # Handle other YAML errors
+        line_number = None
+        if hasattr(e, 'problem_mark') and e.problem_mark:
+            line_number = e.problem_mark.line + 1
+        return False, None, str(e), line_number
+    except Exception as e:
+        return False, None, f"Unexpected error: {str(e)}", None
 
 
 def fix_yaml_indentation(yaml_content):
@@ -88,26 +140,19 @@ def validate_yaml(request):
                     'line_number': None
                 })
             
-            try:
-                # Try to parse the YAML
-                parsed_yaml = yaml.safe_load(yaml_content)
-                
-                # If we get here, the YAML is valid
+            # Use enhanced validation with duplicate key detection
+            is_valid, parsed_data, error_message, line_number = validate_yaml_with_duplicate_check(yaml_content)
+            
+            if is_valid:
                 return JsonResponse({
                     'valid': True,
                     'message': 'Valid YAML content!',
-                    'parsed_data': parsed_yaml
+                    'parsed_data': parsed_data
                 })
-                
-            except yaml.YAMLError as e:
-                # Extract line number from error if available
-                line_number = None
-                if hasattr(e, 'problem_mark') and e.problem_mark:
-                    line_number = e.problem_mark.line + 1  # Convert to 1-based line numbering
-                
+            else:
                 return JsonResponse({
                     'valid': False,
-                    'error': str(e),
+                    'error': error_message,
                     'line_number': line_number
                 })
                 
@@ -144,8 +189,21 @@ def correct_yaml(request):
                 })
             
             try:
-                # First, try to parse with PyYAML to get the data
-                parsed_data = yaml.safe_load(yaml_content)
+                # First, try enhanced validation with duplicate key detection
+                is_valid, parsed_data, error_message, line_number = validate_yaml_with_duplicate_check(yaml_content)
+                
+                if not is_valid:
+                    # If validation fails due to duplicate keys, return specific error
+                    if "Duplicate key" in error_message:
+                        return JsonResponse({
+                            'success': False,
+                            'error': f'Cannot correct YAML: {error_message}',
+                            'corrected_yaml': '',
+                            'line_number': line_number
+                        })
+                    # For other errors, continue with correction attempts below
+                    raise yaml.YAMLError(error_message)
+                
                 print(f"Parsed data successfully: {type(parsed_data)}")
                 
                 if parsed_data is None:
