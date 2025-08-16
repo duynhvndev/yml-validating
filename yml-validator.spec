@@ -19,7 +19,6 @@ a = Analysis(
         ('validator/urls.py', 'validator'),
         ('validator/views.py', 'validator'),
         ('manage.py', '.'),
-        ('db.sqlite3', '.'),
     ],
     hiddenimports=[
         'django',

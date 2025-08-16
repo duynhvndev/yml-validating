@@ -23,12 +23,19 @@ source env/bin/activate  # On Windows: env\Scripts\activate
 pip install -r requirements.txt
 ```
 
-2. **Run the development server:**
+2. **Initialize database:**
+```bash
+python setup.py
+# Or manually:
+# python manage.py migrate
+```
+
+3. **Run the development server:**
 ```bash
 python manage.py runserver
 ```
 
-3. **Access the application:**
+4. **Access the application:**
 Open your browser and go to: `http://127.0.0.1:8000/`
 
 ### Option 2: Build and Run Executable
@@ -39,12 +46,17 @@ source env/bin/activate
 pip install pyinstaller
 ```
 
-2. **Build the executable:**
+2. **Initialize database (required for building):**
+```bash
+python setup.py
+```
+
+3. **Build the executable:**
 ```bash
 pyinstaller yml-validator.spec
 ```
 
-3. **Run the executable:**
+4. **Run the executable:**
 ```bash
 # Default (runs on 127.0.0.1:8000)
 ./dist/yml-validator
